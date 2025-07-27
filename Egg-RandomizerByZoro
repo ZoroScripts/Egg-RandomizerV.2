@@ -1,0 +1,167 @@
+-- Egg Randomizer by Zoro - Final Fixed Edition (Pet Inside + Cooldown Countdown)
+
+local EggData = {
+    ["Common Egg"] = {"Golden Lab", "Bunny", "Dog"},
+    ["Bug Egg"] = {"Snail", "Giant Ant", "Caterpillar", "Praying Mantis", "Dragonfly"},
+    ["Night Egg"] = {"Hedgehog", "Mole", "Frog", "Echo frog", "Night Owl", "Raccoon"},
+    ["Bee Egg"] = {"Bee", "Honey Bee", "Bear Bee", "Petal Bee", "Queen Bee"},
+    ["Anti Bee Egg"] = {"Wasp", "Tarantula Hawk", "Moth", "Butterfly", "Disco Bee"},
+    ["Common Summer Egg"] = {"Starfish", "Seagull", "Crab"},
+    ["Rare Summer Egg"] = {"Flamingo", "Toucan", "Sea Turtle", "Orangutan", "Seal"},
+    ["Paradise Egg"] = {"Ostrich", "Peacock", "Capybara", "Scarlet Macaw", "Mimic Octopus"},
+    ["Dinosaur Egg"] = {"Raptor", "Triceratops", "Stegosaurus", "Pterodactyl", "Brontosaurus", "T-Rex"},
+    ["Primal Egg"] = {"Parasaurolophus", "Iguanodon", "Pachycephalosaurus", "Dilophosaurus", "Ankylosaurus", "Spinosauros"},
+    ["Zen Egg"] = {"Shiba Inu", "Nihonzaru", "Tanuki", "Tanchozoru", "Kappa", "Kitsune"}
+}
+
+local CoreGui = game:GetService("CoreGui")
+pcall(function() CoreGui:FindFirstChild("EggRandomizerUI"):Destroy() end)
+
+local gui = Instance.new("ScreenGui", CoreGui)
+gui.Name = "EggRandomizerUI"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0, 300, 0, 240)
+main.Position = UDim2.new(0.5, -150, 0.5, -120)
+main.BackgroundColor3 = Color3.fromRGB(144, 238, 144)
+main.Active = true
+main.Draggable = true
+Instance.new("UICorner", main)
+
+local title = Instance.new("TextLabel", main)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Text = "🥚 Egg Randomizer"
+title.TextColor3 = Color3.new(0, 0, 0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+
+local espBtn = Instance.new("TextButton", main)
+espBtn.Size = UDim2.new(1, -40, 0, 40)
+espBtn.Position = UDim2.new(0, 20, 0, 40)
+espBtn.Text = "🔍 ESP: OFF"
+espBtn.Font = Enum.Font.GothamSemibold
+espBtn.TextSize = 18
+espBtn.BackgroundColor3 = Color3.fromRGB(120, 255, 120)
+espBtn.TextColor3 = Color3.new(0, 0, 0)
+Instance.new("UICorner", espBtn)
+
+local info = Instance.new("TextLabel", main)
+info.Size = UDim2.new(1, -40, 0, 60)
+info.Position = UDim2.new(0, 20, 0, 90)
+info.Text = "Egg: ???\nPet Inside: ???"
+info.TextColor3 = Color3.new(0, 0, 0)
+info.Font = Enum.Font.Gotham
+info.TextSize = 16
+info.BackgroundTransparency = 1
+info.TextWrapped = true
+info.TextYAlignment = Enum.TextYAlignment.Top
+
+local randomBtn = Instance.new("TextButton", main)
+randomBtn.Size = UDim2.new(1, -40, 0, 40)
+randomBtn.Position = UDim2.new(0, 20, 0, 160)
+randomBtn.Text = "🎲 Randomize Egg"
+randomBtn.Font = Enum.Font.GothamSemibold
+randomBtn.TextSize = 18
+randomBtn.BackgroundColor3 = Color3.fromRGB(120, 255, 120)
+randomBtn.TextColor3 = Color3.new(0, 0, 0)
+Instance.new("UICorner", randomBtn)
+
+local credits = Instance.new("TextLabel", main)
+credits.Size = UDim2.new(1, 0, 0, 20)
+credits.Position = UDim2.new(0, 0, 1, -20)
+credits.Text = "Made by Zoro"
+credits.TextColor3 = Color3.new(0, 0, 0)
+credits.BackgroundTransparency = 1
+credits.Font = Enum.Font.GothamBold
+credits.TextSize = 14
+
+-- ESP Logic
+local espEnabled = false
+local selectedEgg, selectedPet
+local selectedModel
+local debounce = false
+
+local function createBillboard(model, eggName, petName)
+    local old = model:FindFirstChild("EggESP")
+    if old then old:Destroy() end
+
+    local bb = Instance.new("BillboardGui", model)
+    bb.Name = "EggESP"
+    bb.Size = UDim2.new(0, 200, 0, 40)
+    bb.StudsOffset = Vector3.new(0, 3, 0)
+    bb.AlwaysOnTop = true
+
+    local label = Instance.new("TextLabel", bb)
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.Text = eggName .. "\n" .. petName
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 16
+end
+
+local function clearESP()
+    for _, egg in pairs(workspace:GetDescendants()) do
+        if egg:FindFirstChild("EggESP") then
+            egg:FindFirstChild("EggESP"):Destroy()
+        end
+    end
+end
+
+espBtn.MouseButton1Click:Connect(function()
+    espEnabled = not espEnabled
+    espBtn.Text = espEnabled and "🔍 ESP: ON" or "🔍 ESP: OFF"
+    clearESP()
+
+    if espEnabled then
+        for _, egg in pairs(workspace:GetDescendants()) do
+            if egg:IsA("Model") and EggData[egg.Name] then
+                selectedEgg = egg.Name
+                selectedModel = egg
+                local stored = egg:FindFirstChild("PetInside")
+                if not stored then
+                    local str = Instance.new("StringValue", egg)
+                    str.Name = "PetInside"
+                    str.Value = EggData[egg.Name][math.random(1, #EggData[egg.Name])]
+                end
+                selectedPet = egg.PetInside.Value
+                info.Text = "Egg: " .. selectedEgg .. "\nPet Inside: " .. selectedPet
+                createBillboard(egg, selectedEgg, selectedPet)
+                break
+            end
+        end
+    end
+end)
+
+randomBtn.MouseButton1Click:Connect(function()
+    if debounce then return end
+    debounce = true
+
+    if selectedModel and selectedModel:FindFirstChild("PetInside") then
+        local newPet = EggData[selectedEgg][math.random(1, #EggData[selectedEgg])]
+        selectedPet = newPet
+        selectedModel.PetInside.Value = newPet
+        info.Text = "Egg: " .. selectedEgg .. "\nPet Inside: " .. selectedPet
+
+        if selectedModel:FindFirstChild("EggESP") then
+            selectedModel.EggESP.TextLabel.Text = selectedEgg .. "\n" .. selectedPet
+        end
+    else
+        info.Text = "Egg: Not Found\nPet Inside: ???"
+    end
+
+    -- Countdown
+    for i = 15, 0, -1 do
+        randomBtn.Text = "⏳ " .. i .. "s"
+        randomBtn.BackgroundColor3 = Color3.fromRGB(180, 180, 180)
+        randomBtn.AutoButtonColor = false
+        wait(1)
+    end
+    randomBtn.Text = "🎲 Randomize Egg"
+    randomBtn.BackgroundColor3 = Color3.fromRGB(120, 255, 120)
+    randomBtn.AutoButtonColor = true
+    debounce = false
+end)
